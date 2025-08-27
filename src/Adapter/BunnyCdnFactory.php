@@ -2,6 +2,7 @@
 
 namespace Frosh\BunnycdnMediaStorage\Adapter;
 
+use Frosh\BunnycdnMediaStorage\Adapter\FallbackAdapter;
 use Ajgl\Flysystem\Replicate\ReplicateFilesystemAdapter;
 use League\Flysystem\FilesystemAdapter;
 use League\Flysystem\Local\LocalFilesystemAdapter;
@@ -16,26 +17,27 @@ class BunnyCdnFactory implements AdapterFactoryInterface
      * @param array<string, string|bool|int> $config
      */
     public function create(array $config): FilesystemAdapter
-    {
-        $adapterConfig = new AdapterConfig();
-        $adapterConfig->assign($config);
+{
+    $adapterConfig = new AdapterConfig();
+    $adapterConfig->assign($config);
 
-        $adapter = $this->getBasicAdapter($adapterConfig);
+    $adapter = $this->getBasicAdapter($adapterConfig);
 
-        if (!empty($adapterConfig->isUseGarbage())) {
-            $adapter = new GarbageFilesystemAdapter($adapter);
-        }
-
-        if (!empty($adapterConfig->getRoot())) {
-            $adapter = new PathPrefixedAdapter($adapter, $adapterConfig->getRoot());
-        }
-
-        if (!empty($adapterConfig->getReplicationRoot())) {
-            $adapter = new ReplicateFilesystemAdapter($adapter, new LocalFilesystemAdapter($adapterConfig->getReplicationRoot()));
-        }
-
-        return $adapter;
+    if (!empty($adapterConfig->getReplicationRoot())) {
+        $localAdapter = new LocalFilesystemAdapter($adapterConfig->getReplicationRoot());
+        $adapter = new ReplicateFilesystemAdapter($adapter, $localAdapter);
     }
+
+    if (!empty($adapterConfig->isUseGarbage())) {
+        $adapter = new GarbageFilesystemAdapter($adapter);
+    }
+
+    if (!empty($adapterConfig->getRoot())) {
+        $adapter = new PathPrefixedAdapter($adapter, $adapterConfig->getRoot());
+    }
+
+    return $adapter;
+}
 
     private function getBasicAdapter(AdapterConfig $adapterConfig): FilesystemAdapter
     {
