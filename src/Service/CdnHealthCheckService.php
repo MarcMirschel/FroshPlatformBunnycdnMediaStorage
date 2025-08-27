@@ -13,21 +13,29 @@ class CdnHealthCheckService
     private AdapterInterface $cache;
     private LoggerInterface $logger;
     private string $cdnUrl;
+    private bool $fallbackEnabled;
     private const CACHE_KEY = 'bunnycdn.health_check.status';
     private const CACHE_LIFETIME = 60; // 60 Sekunden
 
     public function __construct(
         AdapterInterface $systemCache,
         LoggerInterface $logger,
-        string $cdnUrl
+        string $cdnUrl,
+        ?bool $fallbackEnabled = false
     ) {
         $this->cache = $systemCache;
         $this->logger = $logger;
         $this->cdnUrl = rtrim($cdnUrl, '/') . '/';
+        $this->fallbackEnabled = $fallbackEnabled ?? false;
     }
 
     public function isCdnAvailable(): bool
     {
+        // Wenn das Feature deaktiviert ist, immer true zurückgeben, um den Fallback zu verhindern.
+        if (!$this->fallbackEnabled) {
+            return true;
+        }
+
         $cacheItem = $this->cache->getItem(self::CACHE_KEY);
 
         if ($cacheItem->isHit()) {
